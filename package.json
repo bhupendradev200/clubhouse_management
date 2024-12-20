@@ -1,0 +1,17 @@
+{
+  "name": "federation-app",
+  "version": "1.0.0",
+  "description": "Federation App",
+  "main": "app.js",
+  "scripts": {
+    "start": "serverless offline"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.814.0",
+    "express": "^4.17.1",
+    "serverless-http": "^2.7.0"
+  },
+  "devDependencies": {
+    "serverless-offline": "^14.4.0"
+  }
+}

@@ -1,0 +1,246 @@
+org: bhupendradev
+service: federation-app
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs22.js
+  region: ap-south-1
+  environment:
+    BUCKET_NAME: federation-app-photos
+    TABLE_NAME: FederationTable
+    AUTH_SECRET: federation-secret
+
+functions:
+  # Federation APIs
+  createFederation:
+    handler: src/handlers/federation.create
+    events:
+      - http:
+          path: federation
+          method: post
+          authorizer: validateToken
+
+  updateFederation:
+    handler: src/handlers/federation.update
+    events:
+      - http:
+          path: federation/{id}
+          method: put
+          authorizer: validateToken
+
+  fetchFederation:
+    handler: src/handlers/federation.fetch
+    events:
+      - http:
+          path: federation/{id}
+          method: get
+          authorizer: validateToken
+
+  # Building APIs
+  createBuildingDetail:
+    handler: src/handlers/buildingDetails.create
+    events:
+      - http:
+          path: building-detail
+          method: post
+          authorizer: validateToken
+
+  # Resident APIs (includes S3 image upload)
+  createResident:
+    handler: src/handlers/resident.create
+    events:
+      - http:
+          path: resident
+          method: post
+          authorizer: validateToken
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          - arn:aws:s3:::${self:provider.environment.BUCKET_NAME}/*
+
+  # Attendance APIs
+  createAttendance:
+    handler: src/handlers/attendance.create
+    events:
+      - http:
+          path: attendance
+          method: post
+          authorizer: validateToken
+
+  fetchAttendance:
+    handler: src/handlers/attendance.fetch
+    events:
+      - http:
+          path: attendance
+          method: get
+          authorizer: validateToken
+
+  # Service Detail APIs
+  createServiceDetail:
+    handler: src/handlers/serviceDetail.create
+    events:
+      - http:
+          path: service-detail
+          method: post
+          authorizer: validateToken
+
+  # Token-based Authorizer
+  validateToken:
+    handler: src/handlers/auth.validateToken
+
+  # Auth APIs
+  registerUser:
+    handler: src/handlers/auth.register
+    events:
+      - http:
+          path: auth/register
+          method: post
+
+  loginUser:
+    handler: src/handlers/auth.login
+    events:
+      - http:
+          path: auth/login
+          method: post
+
+  example:
+    handler: src/handlers/exampleHandler.example
+    events:
+      - http:
+          path: api/example
+          method: get
+          authorizer: validateToken
+
+  attendance:
+    handler: src/handlers/attendanceHandler.fetch
+    events:
+      - http:
+          path: api/attendance
+          method: get
+          authorizer: validateToken
+
+resources:
+  Conditions:
+    CreateS3Bucket: !Equals [!Ref ExistingS3Bucket, ""]
+
+  Resources:
+    # Remove the S3Bucket resource creation
+    # S3Bucket:
+    #   Type: AWS::S3::Bucket
+    #   Properties:
+    #     BucketName: ${self:provider.environment.BUCKET_NAME}
+
+    ExistingS3Bucket:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /existing/s3/bucket/name
+        Type: String
+        Value: federation-app-photos
+
+    # DynamoDB Tables
+    FederationTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    BuildingDetailsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: BuildingDetailsTable
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    ResidentTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ResidentTable
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    ServiceDetailTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ServiceDetailTable
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    AttendanceTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: AttendanceTable
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    EmployeeTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: EmployeeTable
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    port: 3000
