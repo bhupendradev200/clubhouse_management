@@ -5,12 +5,18 @@ frameworkVersion: '4'
 
 provider:
   name: aws
-  runtime: nodejs22.js
-  region: ap-south-1
+  runtime: nodejs20.x  # Update to a valid runtime
+  region: ap-south-1  # Set to Mumbai region
   environment:
     BUCKET_NAME: federation-app-photos
     TABLE_NAME: FederationTable
     AUTH_SECRET: federation-secret
+  iamRoleStatements:  # Move iamRoleStatements here
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+      Resource:
+        - arn:aws:s3:::${self:provider.environment.BUCKET_NAME}/*
 
 functions:
   # Federation APIs
@@ -55,12 +61,6 @@ functions:
           path: resident
           method: post
           authorizer: validateToken
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - s3:PutObject
-        Resource:
-          - arn:aws:s3:::${self:provider.environment.BUCKET_NAME}/*
 
   # Attendance APIs
   createAttendance:
@@ -107,14 +107,6 @@ functions:
           path: auth/login
           method: post
 
-  example:
-    handler: src/handlers/exampleHandler.example
-    events:
-      - http:
-          path: api/example
-          method: get
-          authorizer: validateToken
-
   attendance:
     handler: src/handlers/attendanceHandler.fetch
     events:
@@ -124,22 +116,11 @@ functions:
           authorizer: validateToken
 
 resources:
-  Conditions:
-    CreateS3Bucket: !Equals [!Ref ExistingS3Bucket, ""]
-
   Resources:
-    # Remove the S3Bucket resource creation
-    # S3Bucket:
-    #   Type: AWS::S3::Bucket
-    #   Properties:
-    #     BucketName: ${self:provider.environment.BUCKET_NAME}
-
-    ExistingS3Bucket:
-      Type: AWS::SSM::Parameter
+    S3Bucket:
+      Type: AWS::S3::Bucket
       Properties:
-        Name: /existing/s3/bucket/name
-        Type: String
-        Value: federation-app-photos
+        BucketName: ${self:provider.environment.BUCKET_NAME}
 
     # DynamoDB Tables
     FederationTable:
