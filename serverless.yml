@@ -20,6 +20,7 @@ provider:
     - Effect: Allow
       Action:
         - dynamodb:PutItem
+        - dynamodb:GetItem  # Add GetItem permission
       Resource:
         - arn:aws:dynamodb:ap-south-1:182399689730:table/FederationTable
         - arn:aws:dynamodb:ap-south-1:182399689730:table/BuildingDetailsTable
@@ -27,6 +28,18 @@ provider:
         - arn:aws:dynamodb:ap-south-1:182399689730:table/ServiceDetailTable
         - arn:aws:dynamodb:ap-south-1:182399689730:table/AttendanceTable
         - arn:aws:dynamodb:ap-south-1:182399689730:table/EmployeeTable
+    - Effect: Allow
+      Action:
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents  # Add PutLogEvents permission
+      Resource:
+        - arn:aws:logs:ap-south-1:182399689730:log-group:/aws/lambda/federation-app:log-stream:auth
+        - arn:aws:logs:ap-south-1:182399689730:log-group:/aws/lambda/federation-app:log-stream:federation
+        - arn:aws:logs:ap-south-1:182399689730:log-group:/aws/lambda/federation-app:log-stream:attendance
+        - arn:aws:logs:ap-south-1:182399689730:log-group:/aws/lambda/federation-app:log-stream:resident
+        - arn:aws:logs:ap-south-1:182399689730:log-group:/aws/lambda/federation-app:log-stream:buildingDetail
+        - arn:aws:logs:ap-south-1:182399689730:log-group:/aws/lambda/federation-app:log-stream:serviceDetail
 
 functions:
   # Federation APIs
