@@ -17,6 +17,16 @@ provider:
         - s3:PutObject
       Resource:
         - arn:aws:s3:::${self:provider.environment.BUCKET_NAME}/*
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+      Resource:
+        - arn:aws:dynamodb:ap-south-1:182399689730:table/FederationTable
+        - arn:aws:dynamodb:ap-south-1:182399689730:table/BuildingDetailsTable
+        - arn:aws:dynamodb:ap-south-1:182399689730:table/ResidentTable
+        - arn:aws:dynamodb:ap-south-1:182399689730:table/ServiceDetailTable
+        - arn:aws:dynamodb:ap-south-1:182399689730:table/AttendanceTable
+        - arn:aws:dynamodb:ap-south-1:182399689730:table/EmployeeTable
 
 functions:
   # Federation APIs
@@ -27,6 +37,9 @@ functions:
           path: federation
           method: post
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/federation.js
 
   updateFederation:
     handler: src/handlers/federation.update
@@ -35,6 +48,9 @@ functions:
           path: federation/{id}
           method: put
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/federation.js
 
   fetchFederation:
     handler: src/handlers/federation.fetch
@@ -43,6 +59,9 @@ functions:
           path: federation/{id}
           method: get
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/federation.js
 
   # Building APIs
   createBuildingDetail:
@@ -52,6 +71,9 @@ functions:
           path: building-detail
           method: post
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/buildingDetails.js
 
   # Resident APIs (includes S3 image upload)
   createResident:
@@ -61,6 +83,9 @@ functions:
           path: resident
           method: post
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/resident.js
 
   # Attendance APIs
   createAttendance:
@@ -70,6 +95,9 @@ functions:
           path: attendance
           method: post
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/attendance.js
 
   fetchAttendance:
     handler: src/handlers/attendance.fetch
@@ -78,6 +106,9 @@ functions:
           path: attendance
           method: get
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/attendance.js
 
   # Service Detail APIs
   createServiceDetail:
@@ -87,10 +118,16 @@ functions:
           path: service-detail
           method: post
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/serviceDetail.js
 
   # Token-based Authorizer
   validateToken:
     handler: src/handlers/auth.validateToken
+    package:
+      include:
+        - src/handlers/auth.js
 
   # Auth APIs
   registerUser:
@@ -99,6 +136,9 @@ functions:
       - http:
           path: auth/register
           method: post
+    package:
+      include:
+        - src/handlers/auth.js
 
   loginUser:
     handler: src/handlers/auth.login
@@ -106,6 +146,9 @@ functions:
       - http:
           path: auth/login
           method: post
+    package:
+      include:
+        - src/handlers/auth.js
 
   attendance:
     handler: src/handlers/attendanceHandler.fetch
@@ -114,13 +157,33 @@ functions:
           path: api/attendance
           method: get
           authorizer: validateToken
+    package:
+      include:
+        - src/handlers/attendanceHandler.js
 
 resources:
+  Parameters:
+    ExistingS3BucketName:
+      Type: String
+      Default: "federation-app-photos"
+      Description: "Name of an existing S3 bucket to use. Leave empty to create a new bucket."
+
+  Conditions:
+    CreateS3Bucket: !Equals [!Ref ExistingS3BucketName, ""]
+
   Resources:
     S3Bucket:
       Type: AWS::S3::Bucket
+      Condition: CreateS3Bucket
       Properties:
         BucketName: ${self:provider.environment.BUCKET_NAME}
+
+    ExistingS3Bucket:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /existing/s3/bucket/name
+        Type: String
+        Value: !If [CreateS3Bucket, !Ref "AWS::NoValue", !Ref ExistingS3BucketName]
 
     # DynamoDB Tables
     FederationTable:
